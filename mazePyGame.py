@@ -4,7 +4,7 @@ import sys, os
 from pygame.locals import *
 import time
 
-RES = WIDTH, HEIGHT = 1202, 902
+RES = WIDTH, HEIGHT = 902, 602
 TILE = 50
 cols, rows = WIDTH // TILE, HEIGHT // TILE
 pygame.init()
@@ -25,26 +25,6 @@ def get_next_nodes(x, y):
     ways = [-1, 0], [0, -1], [1, 0], [0, 1], [-1, -1], [1, -1], [1, 1], [-1, 1]
     return [(x + dx, y + dy) for dx, dy in ways if check_next_node(x + dx, y + dy)]
 '''
-def get_rect(x, y):
-    return x * TILE + 1, y * TILE + 1, TILE - 2, TILE - 2
-
-def paused(event):
-    #for event in pygame.event.get():
-    if event.type==KEYUP:
-        if event.key==K_p:
-            pause = True
-    #for event in pygame.event.get():
-    elif event.type == KEYUP:
-        if event.key == K_p:
-            pause = True
-            pause = paused()
-    while pause == True:
-        for event in pygame.event.get():
-            if event.type==KEYUP:
-                if event.key==K_p:
-                    return False
-                elif event.key == K_ESCAPE:
-                    exit(0)
 class Cell:
     def __init__(self, x, y):
         self.x, self.y = x, y
@@ -97,15 +77,37 @@ class Cell:
         right = self.check_cell(self.x + 1, self.y)
         bottom = self.check_cell(self.x, self.y + 1)
         left = self.check_cell(self.x - 1, self.y)
-        if top and top.visited:
+        if top and not top.visited:
             if top.walls['bottom'] == False: neighbors.append(top)
-        if right and right.visited:
+        if right and not right.visited:
             if right.walls['left'] == False: neighbors.append(right)
-        if bottom and bottom.visited:
+        if bottom and not bottom.visited:
             if bottom.walls['top'] == False: neighbors.append(bottom)
-        if left and left.visited:
+        if left and not left.visited:
             if left.walls['right'] == False: neighbors.append(left)
+        #random.seed(random.randint(0,100))
         return random.choice(neighbors) if neighbors else False
+
+def get_rect(x, y):
+    return x * TILE + 1, y * TILE + 1, TILE - 2, TILE - 2
+
+def paused(event):
+    #for event in pygame.event.get():
+    if event.type==KEYUP:
+        if event.key==K_p:
+            pause = True
+    #for event in pygame.event.get():
+    elif event.type == KEYUP:
+        if event.key == K_p:
+            pause = True
+            pause = paused()
+    while pause == True:
+        for event in pygame.event.get():
+            if event.type==KEYUP:
+                if event.key==K_p:
+                    return False
+                elif event.key == K_ESCAPE:
+                    exit(0)
 
 def remove_walls(current, next):
     dx = current.x - next.x
@@ -130,12 +132,12 @@ def finding_any_exit(current_cell):
             if event.type == pygame.QUIT:
                 exit()
 
-        current_cell.visited = False
+        current_cell.visited = True
         #current_cell.draw_current_cell('red')
 
         next_cell = current_cell.check_neighbours_for_exit()
         if next_cell:
-            next_cell.visited = False
+            next_cell.visited = True
             path.append(current_cell)
             current_cell = next_cell
         else:
@@ -145,58 +147,66 @@ def finding_any_exit(current_cell):
                 break
         if next_cell == grid_cells[-1]:
             break
+    print(len(path))
     return path
+
 def finding_best_exit():
     paths = []
     for i in range(10):
         way = finding_any_exit(grid_cells[0])
+        reset_map()
         if way:
             paths.append(way)
-    for i in paths:
-        print(len(i))
     return min(paths, key=len).copy()
+
+def reset_map():
+    for cell in grid_cells:
+        cell.visited = False
+
+def generate_Labyrinth(current_cell):
+    while True:
+        sc.fill(pygame.Color('darkslategray'))
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                exit()
+
+        [cell.draw() for cell in grid_cells]
+        current_cell.visited = True
+        current_cell.draw_current_cell('saddlebrown')
+
+        next_cell = current_cell.check_neighbours()
+        if next_cell:
+            next_cell.visited = True
+            stack.append(current_cell)
+            remove_walls(current_cell, next_cell)
+            current_cell = next_cell
+        else:
+            if stack:
+                current_cell = stack.pop()
+            else:
+                break
+
+        pygame.display.flip()
+        clock.tick(100)
+        for event in pygame.event.get():
+            if event.type == KEYUP:
+                if event.key == K_p:
+                    paused(event)
+    
 
 grid_cells = [Cell(col, row) for row in range(rows) for col in range(cols)]
 #current_cell = grid_cells[int(input())]
 current_cell = grid_cells[0]
 stack = []
-
-while True:
-    sc.fill(pygame.Color('darkslategray'))
-
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            exit()
-
-    [cell.draw() for cell in grid_cells]
-    current_cell.visited = True
-    current_cell.draw_current_cell('saddlebrown')
-
-    next_cell = current_cell.check_neighbours()
-    if next_cell:
-        next_cell.visited = True
-        stack.append(current_cell)
-        remove_walls(current_cell, next_cell)
-        current_cell = next_cell
-    else:
-        if stack:
-            current_cell = stack.pop()
-        else:
-            break
-
-    pygame.display.flip()
-    clock.tick(100)
-    for event in pygame.event.get():
-        if event.type == KEYUP:
-            if event.key == K_p:
-                paused(event)
-
-
+generate_Labyrinth(current_cell)
 #dfs
 best_path = finding_best_exit().copy()
 grid_cells[-1].draw_current_cell('brown')
 for cell in best_path:
     cell.draw_current_cell('red')
     pygame.display.update()
+    pygame.display.flip()
+    clock.tick(100)
 
-time.sleep(200)
+time.sleep(10)
